@@ -16,17 +16,6 @@ Built as part of a 4-stage hands-on Python roadmap for TypeScript developers.
 
 ---
 
-## 🗺️ Project Roadmap
-
-| Stage | Focus Area | Status | Deliverables |
-| :--- | :--- | :--- | :--- |
-| **Stage 1** | **Fundamentals & Core Engine** | ✅ Completed | OOP models with dunder methods, `psutil` safe collector, list comprehensions, terminal diagnostics. |
-| **Stage 2** | **Web & Streaming Layer** | 🔄 In Progress | FastAPI REST API, Pydantic v2 schemas, live WebSocket updates (`/ws/live`). |
-| **Stage 3** | **DevOps & Observability** | ⏳ Planned | Plain-text Prometheus exporter (`/metrics`), automatic incident detection, Docker containerization. |
-| **Stage 4** | **Advanced Concurrency & Frontend** | ⏳ Planned | Non-blocking `asyncio` background polling, rolling ring buffer, React/TS live dashboard. |
-
----
-
 ## 🛠️ Tech Stack
 
 - **Language**: Python 3.13+
