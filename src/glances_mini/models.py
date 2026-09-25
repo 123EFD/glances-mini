@@ -34,17 +34,15 @@ class ProcessSnapshot:
 
     def to_dict(self) -> Dict[str, Any]:
         """Convert the snapshot into a plain dictionary (for JSON serialization later)."""
-        snapShot = ProcessSnapshot(
-            pid=self.pid,
-            name=self.name,
-            cpu_percent=self.cpu_percent,
-            memory_percent=self.memory_percent,
-            memory_rss_bytes=self.memory_rss_bytes,
-            disk_read_bytes_sec=self.disk_read_bytes_sec,
-            disk_write_bytes_sec=self.disk_write_bytes_sec,
-        )
-        res = json.dumps(snapShot.to_dict())
-        return json.loads(res)
+        return {
+            "pid": self.pid,
+            "name": self.name,
+            "cpu_percent": self.cpu_percent,
+            "memory_percent": self.memory_percent,
+            "memory_rss_bytes": self.memory_rss_bytes,
+            "disk_read_bytes_sec": self.disk_read_bytes_sec,
+            "disk_write_bytes_sec": self.disk_write_bytes_sec,
+        }
 
 class SystemSnapshot:
     """Represents overall system CPU, Memory, and top processes."""

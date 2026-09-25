@@ -12,7 +12,7 @@ A reference notebook covering FastAPI, Pydantic v2, Python decorators, async/awa
 | **Route Registration** | Method calls: `app.get("/path", handler)` | Decorator syntax: `@app.get("/path")` |
 | **Request Parsing & Validation** | External library (Zod, Joi, express-validator) | Built-in via **Pydantic v2** |
 | **OpenAPI / Swagger Docs** | Manual setup (swagger-ui-express + JSDoc) | **Automatic out-of-the-box** at `/docs` and `/redoc` |
-| **Asynchronous Nature** | Promise-based (Event loop native) | Coroutine-based (`async def` / `await` via `asyncio`) |
+| **Asynchronous Nature** | Promise-based (Event loop native) | Corout__init__ine-based (`async def` / `await` via `asyncio`) |
 
 ---
 
@@ -166,3 +166,69 @@ app.add_middleware(
     allow_headers=["*"],
 )
 ```
+
+---
+
+## 7. Python Module Resolution vs Node.js (`ModuleNotFoundError`)
+
+In Node.js, `require('./src/...')` or path aliases in `tsconfig.json` resolve modules easily. In Python, module imports depend on `sys.path`.
+
+### The Problem:
+If your project structure is:
+```
+glances-mini/
+└── src/
+    └── glances_mini/
+```
+When running commands from the root directory (`glances-mini/`), Python includes `.` (the root) in `sys.path`, but **not** `./src`.
+So when Python sees `from glances_mini.collector import SystemCollector`, it looks for a folder named `glances_mini/` in the root and fails with:
+```
+ModuleNotFoundError: No module named 'glances_mini'
+```
+
+### The Solutions:
+1. **The Uvicorn Flag (`--app-dir`)**:
+   Tell Uvicorn that application code lives inside `src`:
+   ```powershell
+   uvicorn glances_mini.web.app:app --app-dir src --reload --port 8001
+   ```
+2. **Set `PYTHONPATH` in PowerShell**:
+   ```powershell
+   $env:PYTHONPATH="src"
+   uvicorn glances_mini.web.app:app --reload --port 8001
+   ```
+
+---
+
+## 8. Python Gotcha: The `JSON.parse(JSON.stringify())` Deep Clone Trap
+
+In JavaScript/TypeScript, a common idiom to convert or clone objects is:
+```typescript
+const plainObj = JSON.parse(JSON.stringify(instance));
+```
+
+In Python, attempting to do this inside a class method like:
+```python
+def to_dict(self):
+    snapshot = ProcessSnapshot(...)
+    res = json.dumps(snapshot.to_dict())  # CRASH! RecursionError!
+    return json.loads(res)
+```
+causes an **infinite recursion loop**: `to_dict()` calls `to_dict()` on a new object, which calls `to_dict()` again until Python hits the call stack limit.
+
+### Idiomatic Python Solution:
+In Python, an object's state is simply represented by a native `dict`. No serialization/deserialization is needed:
+```python
+def to_dict(self) -> Dict[str, Any]:
+    return {
+        "pid": self.pid,
+        "name": self.name,
+        "cpu_percent": self.cpu_percent,
+        "memory_percent": self.memory_percent,
+        "memory_rss_bytes": self.memory_rss_bytes,
+        "disk_read_bytes_sec": self.disk_read_bytes_sec,
+        "disk_write_bytes_sec": self.disk_write_bytes_sec,
+    }
+```
+Or use Python's built-in `vars(self)` / `__dict__`!
+

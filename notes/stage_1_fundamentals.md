@@ -22,15 +22,18 @@ python -m venv .venv
 # Activate virtual environment
 .\.venv\Scripts\Activate.ps1
 
-# Install packages
-pip install <package-name>
-pip install -r requirements.txt
+# Install packages (Always prefer 'python -m pip' over bare 'pip')
+python -m pip install <package-name>
+python -m pip install -r requirements.txt
 
 # Save installed dependencies
-pip freeze > requirements.txt
+python -m pip freeze > requirements.txt
 ```
 
-> **Take Notice**: Unlike `node_modules`, which is discovered automatically up the directory tree, Python relies on `sys.path`. When your virtual environment is active, the terminal runs the Python interpreter located inside `.venv`, which searches `.venv/Lib/site-packages/`.
+> **Take Notice: Why `python -m pip` instead of bare `pip`?**
+> Unlike `npm` (which always resolves to `./node_modules` in your current folder), running bare `pip` on Windows may resolve to a global Python installation in your system `PATH` (e.g. Python 3.14) instead of your virtual environment (`.venv` running Python 3.13).
+> Running **`python -m pip install`** explicitly tells the currently active Python interpreter to run its own pip module, guaranteeing packages land in your `.venv/Lib/site-packages`.
+
 
 ---
 
