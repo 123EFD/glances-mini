@@ -48,18 +48,6 @@ flowchart TD
         PROM_CLIENT[Prometheus / Grafana] --> PROM
     end
 ```
-
----
-
-## 🗺️ Project Roadmap & Deliverables
-
-| Stage | Focus Area | Status | Deliverables | Key Concepts Learned |
-| :--- | :--- | :---: | :--- | :--- |
-| **Stage 1** | **Fundamentals & Core Engine** | ✅ Completed | `models.py`, `collector.py` | Virtual environments (`venv`), type hints, OOP dunder methods (`__init__`, `__repr__`, `__lt__`), list comprehensions vs `.map()/.filter()`, safe `psutil` process handling. |
-| **Stage 2** | **Web & Streaming Layer** | ✅ Completed | `web/schemas.py`, `web/app.py` | FastAPI routing with `@app` decorators, Pydantic v2 schemas vs Zod, async coroutines vs JS Promises, WebSocket streaming (`/ws/live`), Uvicorn `--app-dir src`. |
-| **Stage 3** | **DevOps & Observability** | ✅ Completed | `incidents.py`, `web/metrics.py`, `Dockerfile` | Context managers (`with open`), JSON Lines (`.jsonl`), OpenMetrics / Prometheus exposition format (`/metrics`), container process table inspection (`--pid=host`). |
-| **Stage 4** | **Advanced Concurrency & Frontend** | ✅ Completed | `history.py`, `web/dashboard.html` | Ring buffer with `collections.deque(maxlen=300)`, non-blocking thread offloading with `asyncio.to_thread()`, FastAPI `lifespan` context manager, single-producer multi-consumer WebSocket broadcast, live Tailwind + Canvas dashboard. |
-
 ---
 
 ## 📁 Project Structure
