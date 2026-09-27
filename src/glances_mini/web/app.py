@@ -1,11 +1,15 @@
 """FastAPI application providing REST endpoints and WebSocket live streaming."""
 
 import asyncio
-from fastapi import FastAPI, WebSocket, WebSocketDisconnect, Query
+from fastapi import FastAPI, WebSocket, WebSocketDisconnect, Query, Response
 from fastapi.middleware.cors import CORSMiddleware
 
 from glances_mini.collector import SystemCollector
 from glances_mini.web.schemas import SystemResponse, ProcessResponse
+from glances_mini.incidents import IncidentManager
+from glances_mini.web.metrics import generate_prometheus_metrics
+
+incident_mgr = IncidentManager()
 
 # Initialize FastAPI application
 app = FastAPI(
@@ -32,6 +36,7 @@ def get_system_metrics(limit: int = Query(default=10, ge=1, le=100)):
     """Fetch the latest snapshot of system health and top processes."""
 
     snapshot = collector.get_system_snapshot(limit=limit)
+    incident_mgr.check_and_record(snapshot)  # Check for congestion and log if necessary
     return {
             "timestamp": snapshot.timestamp,
             "cpu_percent_total": snapshot.cpu_percent_total,
@@ -77,3 +82,13 @@ async def live_metrics_stream(websocket: WebSocket):
     except WebSocketDisconnect:
         # Client closed tab / disconnected
         print("WebSocket client disconnected.")
+        
+@app.get("/api/incidents")
+def get_incidents(limit: int = 10):
+    return incident_mgr.get_recent_incidents(limit=limit)
+
+@app.get("/metrics")
+def get_prometheus_metrics():
+    snapshot = collector.get_system_snapshot(limit=10)
+    content  = generate_prometheus_metrics(snapshot)
+    return Response(content=content, media_type="text/plain; version=0.0.4; charset=utf-8")

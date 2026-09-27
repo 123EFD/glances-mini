@@ -132,3 +132,41 @@ When running in Linux / Docker environments:
 docker run -d --net=host --pid=host glances-mini
 ```
 - `--pid=host`: Shares the host machine's process table with the container so `psutil` can inspect all host processes!
+
+---
+
+## 6. Python Idioms: Slicing, Comprehensions, and Serialization
+
+### 6.1 Brackets `[...]` in List Comprehensions
+- **Square Brackets `[...]`**: Instructs Python to evaluate the loop immediately and return a populated in-memory `list` (array).
+  ```python
+  top_5 = [p.to_dict() for p in snapshot.processes[:5]]
+  ```
+- **Round Parentheses `(...)`**: Creates a **Generator Expression** (lazy iterator). It does not compute values until iterated over (like a JS generator function `function*`).
+- **Curly Braces `{...}`**: Creates a `set` or a `dict`.
+
+### 6.2 Advanced Slicing: `sequence[start : stop : step]`
+Slicing is Python's native equivalent of `.slice()` in JavaScript, but with support for step direction and negative indices:
+
+| Slice Syntax | Meaning | TypeScript Equivalent | Example on `[0, 1, 2, 3, 4, 5]` |
+| :--- | :--- | :--- | :--- |
+| `arr[:5]` | First 5 items (from start to index 5) | `arr.slice(0, 5)` | `[0, 1, 2, 3, 4]` |
+| `arr[-5:]` | Last 5 items (from 5 from end to end) | `arr.slice(-5)` | `[1, 2, 3, 4, 5]` |
+| `arr[::-1]` | Reverse entire sequence | `[...arr].reverse()` | `[5, 4, 3, 2, 1, 0]` |
+| `arr[-3:][::-1]` | Last 3 items, in reverse order | `arr.slice(-3).reverse()` | `[5, 4, 3]` |
+
+- **Why negative index for `max_history`?**
+  `self.incidents[-self.max_history:]` keeps only the newest $N$ items and drops the oldest, implementing an in-memory sliding window / ring buffer. If the list has fewer items than `max_history`, Python safely returns all items without an error.
+- **Single colon `:` vs Double colon `::`**:
+  - `start:stop` uses a single colon (e.g. `[-limit:]`).
+  - When `stop` is omitted and you want to specify `step`, a second colon is used (e.g. `[::-1]` sets `step=-1`).
+
+### 6.3 Why `json.dumps()` in Files vs No `json.dumps()` in FastAPI?
+- **In FastAPI endpoints**: FastAPI has an internal JSON encoder. When you `return {"status": "ok"}`, FastAPI automatically runs `json.dumps()` under the hood before sending the HTTP response.
+- **In File I/O (`open()`)**: Python's `file.write()` only accepts raw strings (`str`) or bytes (`bytes`). Passing a `dict` raises `TypeError`. You must explicitly call `json.dumps(dict_data)` to convert it to a string.
+
+### 6.4 Why Append Mode (`"a"`) and `\n`?
+- Mode `"w"` wipes/truncates the file every time it is opened.
+- Mode `"a"` moves to the end of the file so previous incidents are preserved.
+- `f.write()` does **not** insert newlines automatically. Adding `"\n"` guarantees that every incident occupies exactly one line, producing a valid JSON Lines (`.jsonl`) file.
+
