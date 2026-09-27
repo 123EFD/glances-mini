@@ -1,20 +1,24 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
   <meta charset="UTF-8">
   <title>glances-mini Dashboard</title>
   <script src="https://cdn.tailwindcss.com"></script>
 </head>
+
 <body class="bg-slate-950 text-slate-100 font-sans p-6 min-h-screen">
   <header class="flex justify-between items-center mb-6 border-b border-slate-800 pb-4">
     <div>
       <h1 class="text-2xl font-bold tracking-tight text-white flex items-center gap-2">
         <span>🔍 glances-mini</span>
-        <span id="status-badge" class="text-xs px-2 py-0.5 rounded-full bg-yellow-500/20 text-yellow-400 border border-yellow-500/30">Connecting...</span>
+        <span id="status-badge"
+          class="text-xs px-2 py-0.5 rounded-full bg-yellow-500/20 text-yellow-400 border border-yellow-500/30">Connecting...</span>
       </h1>
       <p class="text-xs text-slate-400 mt-1">Live Contention Diagnostic Monitor</p>
     </div>
-    <div id="congestion-indicator" class="hidden px-3 py-1 bg-red-500/20 border border-red-500/50 text-red-400 rounded-lg text-sm font-semibold animate-pulse">
+    <div id="congestion-indicator"
+      class="hidden px-3 py-1 bg-red-500/20 border border-red-500/50 text-red-400 rounded-lg text-sm font-semibold animate-pulse">
       ⚠️ SYSTEM CONGESTION DETECTED
     </div>
   </header>
@@ -52,6 +56,15 @@
   <div class="bg-slate-900 border border-slate-800 rounded-xl p-5">
     <h2 class="text-sm font-semibold text-slate-300 mb-3">Top Processes by Resource Contention</h2>
     <div class="overflow-x-auto">
+      <div id="advisor-card" class="hidden mb-6 bg-slate-900 border border-amber-500/40 rounded-xl p-5 shadow-lg">
+        <div class="flex items-center gap-2 mb-3">
+          <span class="text-lg">💡</span>
+          <h2 class="text-sm font-bold text-amber-400 uppercase tracking-wider">AI Diagnostic & Solution Advisor</h2>
+        </div>
+        <div id="suggestions-list" class="space-y-3">
+          <!-- Populated by WebSocket -->
+        </div>
+      </div>
       <table class="w-full text-left text-sm">
         <thead class="text-xs uppercase text-slate-500 border-b border-slate-800">
           <tr>
@@ -63,13 +76,17 @@
           </tr>
         </thead>
         <tbody id="process-table-body" class="divide-y divide-slate-800/60 font-mono text-xs">
-          <tr><td colspan="5" class="py-4 text-center text-slate-500">Waiting for live data stream...</td></tr>
+          <tr>
+            <td colspan="5" class="py-4 text-center text-slate-500">Waiting for live data stream...</td>
+          </tr>
         </tbody>
       </table>
     </div>
   </div>
 
   <script>
+    const advisorCard = document.getElementById("advisor-card");
+    const suggestionsList = document.getElementById("suggestions-list");
     const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
     const wsUrl = `${protocol}//${window.location.host}/ws/live`;
     const socket = new WebSocket(wsUrl);
@@ -99,7 +116,7 @@
       if (historyPoints.length < 2) return;
 
       const step = canvas.width / (historyPoints.length - 1);
-      
+
       // Draw 85% congestion threshold line
       const thresholdY = canvas.height * (1 - 0.85);
       ctx.strokeStyle = "rgba(239, 68, 68, 0.4)";
@@ -129,7 +146,7 @@
 
     socket.onmessage = (event) => {
       const data = JSON.parse(event.data);
-      
+
       // Update gauges
       cpuVal.textContent = data.cpu_percent_total.toFixed(1) + "%";
       cpuBar.style.width = Math.min(data.cpu_percent_total, 100) + "%";
@@ -147,8 +164,34 @@
       if (historyPoints.length > 60) historyPoints.shift();
       drawHistory();
 
-      // Render processes table
-      tbody.innerHTML = data.processes.map(p => `
+      socket.onmessage = (event) => {
+        const data = JSON.parse(event.data);
+        // Render AI Suggestions
+        if (data.suggestions && data.suggestions.length > 0) {
+          advisorCard.classList.remove("hidden");
+          suggestionsList.innerHTML = data.suggestions.map(s => `
+      <div class="bg-slate-950/80 border border-slate-800 rounded-lg p-3">
+        <div class="flex justify-between items-start">
+          <span class="font-semibold text-white text-sm">${s.title}</span>
+          <span class="text-xs px-2 py-0.5 rounded font-mono ${s.severity === 'critical' ? 'bg-red-500/20 text-red-400' : 'bg-yellow-500/20 text-yellow-400'}">${s.severity.toUpperCase()}</span>
+        </div>
+        <p class="text-xs text-slate-300 mt-1">${s.description}</p>
+        <div class="mt-2 text-xs text-cyan-300 bg-cyan-950/30 border border-cyan-800/40 rounded p-2">
+          <strong>Recommended Action:</strong> ${s.action}
+        </div>
+        <div class="mt-2 text-right">
+          <a href="${s.reference_url}" target="_blank" class="text-xs text-indigo-400 hover:text-indigo-300 underline inline-flex items-center gap-1">
+            Official Reference / Fix Guide &rarr;
+          </a>
+        </div>
+      </div>
+    `).join("");
+        } else {
+          advisorCard.classList.add("hidden");
+        }
+
+        // Render processes table
+        tbody.innerHTML = data.processes.map(p => `
         <tr class="hover:bg-slate-800/40">
           <td class="py-2 px-3 text-slate-400">${p.pid}</td>
           <td class="py-2 px-3 text-white font-medium">${p.name}</td>
@@ -157,12 +200,14 @@
           <td class="py-2 px-3 text-right text-slate-300">${(p.memory_rss_bytes / (1024 * 1024)).toFixed(0)} MB</td>
         </tr>
       `).join("");
-    };
+      };
 
-    socket.onclose = () => {
-      statusBadge.textContent = "Disconnected";
-      statusBadge.className = "text-xs px-2 py-0.5 rounded-full bg-red-500/20 text-red-400 border border-red-500/30";
+      socket.onclose = () => {
+        statusBadge.textContent = "Disconnected";
+        statusBadge.className = "text-xs px-2 py-0.5 rounded-full bg-red-500/20 text-red-400 border border-red-500/30";
+      };
     };
   </script>
 </body>
+
 </html>

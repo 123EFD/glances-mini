@@ -17,13 +17,10 @@ class SystemHistoryBuffer:
 
     def append(self, snapshot: SystemSnapshot) -> None:
         """Add a new snapshot. Oldest snapshot is automatically discarded if full."""
-        # TODO 1: Append snapshot to self.buffer
         self.buffer.append(snapshot)
 
     def get_latest(self) -> Optional[SystemSnapshot]:
         """Return the most recent snapshot without triggering a new OS scan."""
-        # TODO 2: Return self.buffer[-1] if self.buffer has items, else return None
-        # Hint: In Python, an empty deque is Falsy: if self.buffer: return self.buffer[-1]
         return self.buffer[-1] if self.buffer else None
     
 

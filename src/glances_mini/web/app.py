@@ -12,10 +12,12 @@ from glances_mini.history import SystemHistoryBuffer
 from glances_mini.web.schemas import SystemResponse, ProcessResponse
 from glances_mini.incidents import IncidentManager
 from glances_mini.web.metrics import generate_prometheus_metrics
+from glances_mini.advisor import DiagnosticAdvisor
 
 collector = SystemCollector()
 history_buffer = SystemHistoryBuffer(max_points=300)  # 5 minutes of history at 1-second intervals
 incident_mgr = IncidentManager()
+advisor = DiagnosticAdvisor()
 
 active_websockets: Set[WebSocket] = set()
 
@@ -23,13 +25,10 @@ async def background_metric_poller():
     """Continuously poll metrics every second without blocking the asyncio loop."""
     try:
         while True:
-            # TODO 1: Run collector.get_system_snapshot in a background thread:
             snapshot = await asyncio.to_thread(collector.get_system_snapshot, limit=10)
-            
-            # TODO 2: Store in history buffer and check for incidents:
+            suggestions = advisor.analyze(snapshot)
             history_buffer.append(snapshot)
             incident_mgr.check_and_record(snapshot)
-            # TODO 3: Broadcast to all connected WebSocket clients:
             if active_websockets:
                 payload = {
                     "timestamp": snapshot.timestamp,
@@ -39,6 +38,7 @@ async def background_metric_poller():
                     "memory_total_bytes": snapshot.memory_total_bytes,
                     "processes": [p.to_dict() for p in snapshot.processes],
                     "is_congested": snapshot.is_congested(),
+                    "suggestions": suggestions,
                 }
             # Send to all clients and drop disconnected ones
                 for ws in list(active_websockets):
