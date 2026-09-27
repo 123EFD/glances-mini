@@ -199,6 +199,16 @@ items: list[str] = []
 - **`__pycache__/` and `*.pyc`**: In Node.js/TypeScript, you never commit `/dist`, `.tsbuildinfo`, or `node_modules/.cache`. Similarly, `.pyc` files are Python's pre-compiled bytecode caches. They are machine-specific and Python-version specific. Committing them clutters Git with binary diffs.
 - **`*.jsonl` / `*.log`**: Runtime data and audit logs generated on your local machine should never be committed to source control.
 
+> **Crucial Git Gotcha: Why `.gitignore` doesn't work on already-tracked files:**
+> `.gitignore` ONLY prevents **Untracked (`U`)** files from entering Git. If a file was already committed previously, Git marks it as **Modified (`M`)** and ignores `.gitignore`.
+> To untrack it without deleting the local file from disk, run:
+> ```powershell
+> git rm -r --cached .
+> git add .
+> git commit -m "chore: untrack gitignored files"
+> ```
+
+
 ### 8.2 Windows Multi-Core CPU Quirk: `System Idle Process`
 In your process list, you may see:
 ```text
