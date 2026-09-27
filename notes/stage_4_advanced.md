@@ -191,4 +191,23 @@ items: list[str] = []
 2. **Dunder Method Hook (`__class_getitem__`)**: In Python, generics are implemented at runtime using square brackets `[]`. When you write `set[WebSocket]`, Python invokes the class dunder method `set.__class_getitem__(WebSocket)`.
 3. **Consistency**: In Python, all indexing, slicing, and type parameterization share the unified `[...]` bracket syntax.
 
+---
+
+## 8. Python Project Hygiene & Windows System Diagnostics
+
+### 8.1 What to `.gitignore`: `__pycache__` and `*.jsonl`
+- **`__pycache__/` and `*.pyc`**: In Node.js/TypeScript, you never commit `/dist`, `.tsbuildinfo`, or `node_modules/.cache`. Similarly, `.pyc` files are Python's pre-compiled bytecode caches. They are machine-specific and Python-version specific. Committing them clutters Git with binary diffs.
+- **`*.jsonl` / `*.log`**: Runtime data and audit logs generated on your local machine should never be committed to source control.
+
+### 8.2 Windows Multi-Core CPU Quirk: `System Idle Process`
+In your process list, you may see:
+```text
+PID 0 | System Idle Process | 923.7% CPU
+```
+**Why CPU% is over 100% and what PID 0 means:**
+1. **Multi-core scaling**: In `psutil`, CPU usage per process is calculated across all logical CPU cores. If your CPU has 10 cores, total capacity is $1000\%$.
+2. **System Idle Process**: On Windows, PID 0 represents the kernel thread that executes when **no other thread is scheduled to run**.
+3. **923.7% Idle means the CPU is doing NOTHING!** The machine is actually ~92% idle and relaxed. A diagnostic tool must filter out PID 0 or treat it as idle capacity, not a resource hog!
+
+
 

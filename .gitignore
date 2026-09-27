@@ -1,0 +1,21 @@
+# Python Bytecode Cache
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Virtual Environments
+.venv/
+env/
+venv/
+
+# Local Runtime Data & Logs
+incidents.jsonl
+*.log
+
+# Operating System files
+Thumbs.db
+.DS_Store
+
+# Editor configurations
+.vscode/
+.idea/
