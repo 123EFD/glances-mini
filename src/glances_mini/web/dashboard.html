@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>glances-mini Dashboard</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-slate-950 text-slate-100 font-sans p-6 min-h-screen">
+  <header class="flex justify-between items-center mb-6 border-b border-slate-800 pb-4">
+    <div>
+      <h1 class="text-2xl font-bold tracking-tight text-white flex items-center gap-2">
+        <span>🔍 glances-mini</span>
+        <span id="status-badge" class="text-xs px-2 py-0.5 rounded-full bg-yellow-500/20 text-yellow-400 border border-yellow-500/30">Connecting...</span>
+      </h1>
+      <p class="text-xs text-slate-400 mt-1">Live Contention Diagnostic Monitor</p>
+    </div>
+    <div id="congestion-indicator" class="hidden px-3 py-1 bg-red-500/20 border border-red-500/50 text-red-400 rounded-lg text-sm font-semibold animate-pulse">
+      ⚠️ SYSTEM CONGESTION DETECTED
+    </div>
+  </header>
+
+  <!-- Metric Gauges -->
+  <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+    <div class="bg-slate-900 border border-slate-800 rounded-xl p-5">
+      <div class="flex justify-between items-center mb-2">
+        <span class="text-sm text-slate-400 font-medium">System CPU</span>
+        <span id="cpu-val" class="text-2xl font-bold font-mono text-cyan-400">0.0%</span>
+      </div>
+      <div class="w-full bg-slate-800 h-2.5 rounded-full overflow-hidden">
+        <div id="cpu-bar" class="bg-cyan-500 h-full rounded-full transition-all duration-300" style="width: 0%"></div>
+      </div>
+    </div>
+
+    <div class="bg-slate-900 border border-slate-800 rounded-xl p-5">
+      <div class="flex justify-between items-center mb-2">
+        <span class="text-sm text-slate-400 font-medium">Memory Usage</span>
+        <span id="mem-val" class="text-2xl font-bold font-mono text-purple-400">0.0%</span>
+      </div>
+      <div class="w-full bg-slate-800 h-2.5 rounded-full overflow-hidden">
+        <div id="mem-bar" class="bg-purple-500 h-full rounded-full transition-all duration-300" style="width: 0%"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Historical Timeline Canvas (Lag Spike Visualizer) -->
+  <div class="bg-slate-900 border border-slate-800 rounded-xl p-5 mb-6">
+    <h2 class="text-sm font-semibold text-slate-300 mb-3">Historical Timeline (Last 60 Seconds)</h2>
+    <canvas id="historyChart" class="w-full h-28 bg-slate-950/60 rounded-lg"></canvas>
+  </div>
+
+  <!-- Top Processes Table -->
+  <div class="bg-slate-900 border border-slate-800 rounded-xl p-5">
+    <h2 class="text-sm font-semibold text-slate-300 mb-3">Top Processes by Resource Contention</h2>
+    <div class="overflow-x-auto">
+      <table class="w-full text-left text-sm">
+        <thead class="text-xs uppercase text-slate-500 border-b border-slate-800">
+          <tr>
+            <th class="py-2 px-3">PID</th>
+            <th class="py-2 px-3">Process Name</th>
+            <th class="py-2 px-3 text-right">CPU%</th>
+            <th class="py-2 px-3 text-right">Memory%</th>
+            <th class="py-2 px-3 text-right">Memory (MB)</th>
+          </tr>
+        </thead>
+        <tbody id="process-table-body" class="divide-y divide-slate-800/60 font-mono text-xs">
+          <tr><td colspan="5" class="py-4 text-center text-slate-500">Waiting for live data stream...</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <script>
+    const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
+    const wsUrl = `${protocol}//${window.location.host}/ws/live`;
+    const socket = new WebSocket(wsUrl);
+
+    const statusBadge = document.getElementById("status-badge");
+    const congestionInd = document.getElementById("congestion-indicator");
+    const cpuVal = document.getElementById("cpu-val");
+    const cpuBar = document.getElementById("cpu-bar");
+    const memVal = document.getElementById("mem-val");
+    const memBar = document.getElementById("mem-bar");
+    const tbody = document.getElementById("process-table-body");
+
+    // Simple canvas history graph
+    const canvas = document.getElementById("historyChart");
+    const ctx = canvas.getContext("2d");
+    const historyPoints = [];
+
+    function resizeCanvas() {
+      canvas.width = canvas.parentElement.clientWidth - 40;
+      canvas.height = 110;
+    }
+    window.addEventListener("resize", resizeCanvas);
+    resizeCanvas();
+
+    function drawHistory() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      if (historyPoints.length < 2) return;
+
+      const step = canvas.width / (historyPoints.length - 1);
+      
+      // Draw 85% congestion threshold line
+      const thresholdY = canvas.height * (1 - 0.85);
+      ctx.strokeStyle = "rgba(239, 68, 68, 0.4)";
+      ctx.setLineDash([4, 4]);
+      ctx.beginPath();
+      ctx.moveTo(0, thresholdY);
+      ctx.lineTo(canvas.width, thresholdY);
+      ctx.stroke();
+      ctx.setLineDash([]);
+
+      // Draw CPU line
+      ctx.strokeStyle = "#06b6d4";
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      historyPoints.forEach((p, i) => {
+        const x = i * step;
+        const y = canvas.height * (1 - p.cpu / 100);
+        if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+      });
+      ctx.stroke();
+    }
+
+    socket.onopen = () => {
+      statusBadge.textContent = "Live";
+      statusBadge.className = "text-xs px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-500/30";
+    };
+
+    socket.onmessage = (event) => {
+      const data = JSON.parse(event.data);
+      
+      // Update gauges
+      cpuVal.textContent = data.cpu_percent_total.toFixed(1) + "%";
+      cpuBar.style.width = Math.min(data.cpu_percent_total, 100) + "%";
+      memVal.textContent = data.memory_percent.toFixed(1) + "%";
+      memBar.style.width = Math.min(data.memory_percent, 100) + "%";
+
+      if (data.is_congested) {
+        congestionInd.classList.remove("hidden");
+      } else {
+        congestionInd.classList.add("hidden");
+      }
+
+      // Add to history
+      historyPoints.push({ cpu: data.cpu_percent_total, mem: data.memory_percent });
+      if (historyPoints.length > 60) historyPoints.shift();
+      drawHistory();
+
+      // Render processes table
+      tbody.innerHTML = data.processes.map(p => `
+        <tr class="hover:bg-slate-800/40">
+          <td class="py-2 px-3 text-slate-400">${p.pid}</td>
+          <td class="py-2 px-3 text-white font-medium">${p.name}</td>
+          <td class="py-2 px-3 text-right text-cyan-400 font-semibold">${p.cpu_percent.toFixed(1)}%</td>
+          <td class="py-2 px-3 text-right text-purple-400">${p.memory_percent.toFixed(1)}%</td>
+          <td class="py-2 px-3 text-right text-slate-300">${(p.memory_rss_bytes / (1024 * 1024)).toFixed(0)} MB</td>
+        </tr>
+      `).join("");
+    };
+
+    socket.onclose = () => {
+      statusBadge.textContent = "Disconnected";
+      statusBadge.className = "text-xs px-2 py-0.5 rounded-full bg-red-500/20 text-red-400 border border-red-500/30";
+    };
+  </script>
+</body>
+</html>

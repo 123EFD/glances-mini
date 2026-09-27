@@ -48,8 +48,22 @@ python -c "from glances_mini.collector import SystemCollector; c = SystemCollect
 
 ---
 
+## 🗺️ Project Roadmap
+
+| Stage | Focus Area | Status | Deliverables |
+| :--- | :--- | :--- | :--- |
+| **Stage 1** | **Fundamentals & Core Engine** | ✅ Completed | OOP models with dunder methods, `psutil` safe collector, list comprehensions, terminal diagnostics. |
+| **Stage 2** | **Web & Streaming Layer** | ✅ Completed | FastAPI REST API, Pydantic v2 schemas, live WebSocket updates (`/ws/live`). |
+| **Stage 3** | **DevOps & Observability** | ✅ Completed | Plain-text Prometheus exporter (`/metrics`), automatic incident detection, Docker containerization. |
+| **Stage 4** | **Advanced Concurrency & Frontend** | 🔄 In Progress | Non-blocking `asyncio` background polling, rolling ring buffer, React/TS live dashboard. |
+
+---
+
 ## 📚 Learning Notes
 
 For TypeScript developers transitioning to Python, detailed concept comparisons and gotchas are documented in the `notes/` folder:
 - [Stage 1: Python Fundamentals for TS Developers](notes/stage_1_fundamentals.md)
 - [Stage 2: Web Layer & Streaming (FastAPI, Pydantic, WebSockets)](notes/stage_2_web_layer.md)
+- [Stage 3: DevOps & Observability](notes/stage_3_devops.md)
+- [Stage 4: Advanced Concurrency & Historical Buffers](notes/stage_4_advanced.md)
+
