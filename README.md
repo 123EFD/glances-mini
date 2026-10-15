@@ -17,39 +17,6 @@ Built as a hands-on, 4-stage Python mastery project for TypeScript developers.
 
 ---
 
-## 🏗️ Architecture & Component Flow
-
-```mermaid
-flowchart TD
-    subgraph Host System
-        PS[psutil OS C Calls]
-    end
-
-    subgraph "Core Engine (Background Task)"
-        POL[asyncio Poller Loop\n1-second tick] -->|asyncio.to_thread| PS
-        POL -->|Produce Snapshot| SNAP[SystemSnapshot & ProcessSnapshot]
-        SNAP -->|O(1) Append| RING[SystemHistoryBuffer\ndeque maxlen=300]
-        SNAP -->|Threshold Check >85%| INC[IncidentManager]
-        INC -->|with open 'a'| DISK[(incidents.jsonl)]
-    end
-
-    subgraph "FastAPI Server"
-        POL -->|Broadcast Frame| WS["/ws/live"]
-        RING -->|Read Latest (0ms)| REST_SYS["GET /api/system"]
-        RING -->|Read Timeline| REST_HIST["GET /api/history"]
-        INC -->|Read Reverse Log| REST_INC["GET /api/incidents"]
-        RING -->|Generate Gauges| PROM["GET /metrics"]
-        UI_ROUTE["GET /"] --> DASH["dashboard.html"]
-    end
-
-    subgraph "Clients"
-        DASH <-->|WebSocket Stream| WS
-        DASH -->|Fetch History & Incidents| REST_HIST
-        PROM_CLIENT[Prometheus / Grafana] --> PROM
-    end
-```
----
-
 ## 📁 Project Structure
 
 ```
